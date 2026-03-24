@@ -1,0 +1,89 @@
+{
+  "gallery": [
+    {
+      "id": "1",
+      "title": "Encontro na praça Eu amo Itabaiana",
+      "description": "Mais de 20 motociclistas reunidos no primeiro encontro do clube.",
+      "imageUrl": "/uploads/1774315948860-9f108561-96ef-4716-b1fb-2f87bd50c128.jpeg",
+      "date": "2026-03-22",
+      "time": "16:30",
+      "location": "Itabaiana, SE",
+      "mapLink": "https://maps.app.goo.gl/WpmLNeP9CxiAq9jg7",
+      "eventName": "Encontro na praça Eu amo Itabaiana - 22/03/2026",
+      "createdAt": 1711152000000
+    }
+  ],
+  "routes": [
+    {
+      "id": "r1",
+      "title": "Rota de Itabaiana-SE para Penedo",
+      "description": "Uma rota saindo de Itabaiana-SE com destino a Penedo, ideal para quem busca uma viagem agradável com belas paisagens e boa companhia na estrada.",
+      "imageUrl": "/uploads/1774314742904-e3447502-b58f-46c0-aadb-5f5d325ca2df.webp",
+      "date": "2026-05-25",
+      "time": "05:00",
+      "location": "Saída de Itabaiana-SE até Penedo-AL",
+      "routeLink": "https://maps.app.goo.gl/TtfawLY7CGyuiSF16",
+      "mapsLink": "https://maps.app.goo.gl/TtfawLY7CGyuiSF16",
+      "gpsCoordinates": "-10.6850, -37.4278",
+      "distance": "aproximadamente 230 km",
+      "difficulty": "Moderada",
+      "createdAt": 1711152001000
+    }
+  ],
+  "members": [
+    {
+      "id": "1",
+      "name": "Jadson Tavares",
+      "city": "Itabaiana, SE",
+      "moto": "Honda CB300F ",
+      "photo": "/uploads/1774316136173-d7065e67-b310-45ea-a63f-3cff1427efed.jpg",
+      "createdAt": 1711152002000
+    },
+    {
+      "id": "2",
+      "name": "Marcelo Augusto",
+      "city": "Itabaiana-SE",
+      "moto": "Shineray Storm 200",
+      "photo": "/uploads/1774316077427-b7caf5e9-2974-4d90-8370-c3954950e142.png",
+      "createdAt": 1711152003000
+    }
+  ],
+  "sponsors": [
+    {
+      "id": "s1",
+      "name": "JRPV - Proteção Veicular",
+      "logo": "/uploads/1774315081464-0547e8e2-e566-4532-8118-110872a9a125.jpg",
+      "description": "JRPV BRASIL PROTEÇÃO PATRIMONIAL",
+      "link": "https://www.instagram.com/jrpvbrasil?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==",
+      "createdAt": 1711152004000
+    },
+    {
+      "id": "s2",
+      "name": "AD Motos",
+      "logo": "/uploads/1774315189116-fdbc70fe-e402-470c-813e-a14ae6989d00.png",
+      "description": "Revisão e serviços gerais",
+      "link": "https://www.instagram.com/admotos.ita?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==",
+      "createdAt": 1711152005000
+    }
+  ],
+  "events": [
+    {
+      "id": "e1",
+      "name": "Passeio para Penedo",
+      "date": "2026-05-25",
+      "time": "05:00",
+      "location": "Saída de Itabaiana-SE",
+      "description": "Concentração dos membros para saída rumo a Penedo-AL.",
+      "createdAt": 1711152006000
+    }
+  ],
+  "users": [
+    {
+      "id": "u1",
+      "username": "admin",
+      "passwordHash": "$2a$10$3hjWU/8zXzyZ3NJwsXrs1ueI0zJO7FXmAPtv/LtE90u2YZ8pNSmHG",
+      "role": "admin",
+      "createdAt": 1711152007000
+    }
+  ]
+}
