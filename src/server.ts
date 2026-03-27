@@ -82,7 +82,7 @@ app.use(
 const port = Number(process.env.PORT || env.port || 3001);
 
 app.listen(port, "0.0.0.0", () => {
-  console.log(`🚀 Backend rodando em http://0.0.0.0:${port}`);
-  console.log(`🌐 Origens permitidas CORS: ${allowedOrigins.join(", ")}`);
-  console.log("🗂️ Imagens persistidas no banco via data URL");
+  console.log(`Backend rodando em http://0.0.0.0:${port}`);
+  console.log(`Origens permitidas CORS: ${allowedOrigins.join(", ")}`);
+  console.log("Imagens persistidas no banco via data URL");
 });

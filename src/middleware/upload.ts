@@ -9,13 +9,7 @@ const allowedMimeTypes = new Set([
   "image/gif",
 ]);
 
-const allowedExtensions = new Set([
-  ".jpg",
-  ".jpeg",
-  ".png",
-  ".webp",
-  ".gif",
-]);
+const allowedExtensions = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif"]);
 
 function normalizeExtension(originalname?: string | null) {
   const ext = path.extname(originalname || "").toLowerCase();
