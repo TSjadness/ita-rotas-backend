@@ -5,3 +5,5 @@ export const ok = <T>(res: Response, data: T, status = 200) =>
 
 export const fail = (res: Response, message: string, status = 400, details?: unknown) =>
   res.status(status).json({ success: false, message, details });
+
+
