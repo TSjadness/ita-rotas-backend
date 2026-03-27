@@ -1,8 +1,6 @@
 import multer from "multer";
 import path from "path";
-import { v4 as uuid } from "uuid";
 import { env } from "../config/env.js";
-import { ensureUploadsDir, uploadsDir } from "../services/files.js";
 
 const allowedMimeTypes = new Set([
   "image/jpeg",
@@ -29,26 +27,7 @@ function normalizeExtension(originalname?: string | null) {
   return null;
 }
 
-const storage = multer.diskStorage({
-  destination: async (_req, _file, cb) => {
-    try {
-      await ensureUploadsDir();
-      cb(null, uploadsDir);
-    } catch (error) {
-      cb(error as Error, uploadsDir);
-    }
-  },
-
-  filename: (_req, file, cb) => {
-    const ext = normalizeExtension(file.originalname);
-
-    if (!ext) {
-      return cb(new Error("Extensão de arquivo inválida."), "");
-    }
-
-    cb(null, `${Date.now()}-${uuid()}${ext}`);
-  },
-});
+const storage = multer.memoryStorage();
 
 function fileFilter(
   _req: Express.Request,

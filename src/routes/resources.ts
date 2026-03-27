@@ -5,7 +5,11 @@ import {
   uploadSingleImage,
   uploadMultipleImages,
 } from "../middleware/upload.js";
-import { removeLocalUploadIfExists } from "../services/files.js";
+import {
+  fileToDataUrl,
+  filesToDataUrls,
+  removeLocalUploadIfExists,
+} from "../services/files.js";
 import { prisma } from "../services/prisma.js";
 import { fail, ok } from "../utils/http.js";
 import { DatabaseSchema } from "../types/index.js";
@@ -429,8 +433,8 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
   });
 
   async function handleCreate(req: any, res: any) {
-    const fileUrl = req.file ? `/uploads/${req.file.filename}` : undefined;
-    const uploadedFiles: Array<{ filename: string }> = Array.isArray(req.files)
+    const fileUrl = fileToDataUrl(req.file);
+    const uploadedFiles: Express.Multer.File[] = Array.isArray(req.files)
       ? req.files
       : [];
     const body = { ...req.body };
@@ -442,17 +446,13 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
     const parsed = schema.safeParse(body);
 
     if (!parsed.success) {
-      if (fileUrl) await removeLocalUploadIfExists(fileUrl);
-      for (const file of uploadedFiles) {
-        await removeLocalUploadIfExists(`/uploads/${file.filename}`);
-      }
       return fail(res, "Dados inválidos.", 422, parsed.error.flatten());
     }
 
     switch (key) {
       case "gallery": {
         const payload = parsed.data as z.infer<typeof gallerySchema>;
-        const files = uploadedFiles.map((file) => `/uploads/${file.filename}`);
+        const files = filesToDataUrls(uploadedFiles);
         const hasFiles = files.length > 0;
         const coverIndex = Math.min(
           payload.coverIndex ?? 0,
@@ -547,18 +547,14 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
   }
 
   async function handleUpdate(req: any, res: any) {
-    const fileUrl = req.file ? `/uploads/${req.file.filename}` : undefined;
-    const uploadedFiles: Array<{ filename: string }> = Array.isArray(req.files)
+    const fileUrl = fileToDataUrl(req.file);
+    const uploadedFiles: Express.Multer.File[] = Array.isArray(req.files)
       ? req.files
       : [];
 
     const id = getParamId(req.params.id);
 
     if (!id) {
-      if (fileUrl) await removeLocalUploadIfExists(fileUrl);
-      for (const file of uploadedFiles) {
-        await removeLocalUploadIfExists(`/uploads/${file.filename}`);
-      }
       return fail(res, "Registro não encontrado.", 404);
     }
 
@@ -574,10 +570,6 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
         });
 
         if (!existing) {
-          if (fileUrl) await removeLocalUploadIfExists(fileUrl);
-          for (const file of uploadedFiles) {
-            await removeLocalUploadIfExists(`/uploads/${file.filename}`);
-          }
           return fail(res, "Registro não encontrado.", 404);
         }
 
@@ -596,9 +588,6 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
         });
 
         if (!parsed.success) {
-          for (const file of uploadedFiles) {
-            await removeLocalUploadIfExists(`/uploads/${file.filename}`);
-          }
           return fail(res, "Dados inválidos.", 422, parsed.error.flatten());
         }
 
@@ -606,13 +595,6 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
         const removedIds = parseRemovedIds(payload.removedImageIds || "");
 
         if (removedIds.length > 0) {
-          const imagesToRemove = existing.images.filter((img) =>
-            removedIds.includes(img.id),
-          );
-          for (const image of imagesToRemove) {
-            await removeLocalUploadIfExists(image.imageUrl);
-          }
-
           await prisma.galleryImage.deleteMany({
             where: {
               id: { in: removedIds },
@@ -621,9 +603,7 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
           });
         }
 
-        const newFiles = uploadedFiles.map(
-          (file) => `/uploads/${file.filename}`,
-        );
+        const newFiles = filesToDataUrls(uploadedFiles);
 
         if (newFiles.length > 0) {
           const remainingCount = await prisma.galleryImage.count({
@@ -694,14 +674,6 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
           },
         });
 
-        if (
-          existing.imageUrl &&
-          existing.imageUrl !== updated.imageUrl &&
-          !currentImages.some((img) => img.imageUrl === existing.imageUrl)
-        ) {
-          await removeLocalUploadIfExists(existing.imageUrl);
-        }
-
         return ok(res, mapGalleryItem(updated));
       }
 
@@ -711,7 +683,6 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
         });
 
         if (!existing) {
-          if (fileUrl) await removeLocalUploadIfExists(fileUrl);
           return fail(res, "Registro não encontrado.", 404);
         }
 
@@ -739,12 +710,7 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
         });
 
         if (!parsed.success) {
-          if (fileUrl) await removeLocalUploadIfExists(fileUrl);
           return fail(res, "Dados inválidos.", 422, parsed.error.flatten());
-        }
-
-        if (existing.imageUrl && existing.imageUrl !== parsed.data.imageUrl) {
-          await removeLocalUploadIfExists(existing.imageUrl);
         }
 
         const updated = await prisma.route.update({
@@ -761,7 +727,6 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
         });
 
         if (!existing) {
-          if (fileUrl) await removeLocalUploadIfExists(fileUrl);
           return fail(res, "Registro não encontrado.", 404);
         }
 
@@ -782,12 +747,7 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
         });
 
         if (!parsed.success) {
-          if (fileUrl) await removeLocalUploadIfExists(fileUrl);
           return fail(res, "Dados inválidos.", 422, parsed.error.flatten());
-        }
-
-        if (existing.photo && existing.photo !== parsed.data.photo) {
-          await removeLocalUploadIfExists(existing.photo);
         }
 
         const updated = await prisma.member.update({
@@ -804,7 +764,6 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
         });
 
         if (!existing) {
-          if (fileUrl) await removeLocalUploadIfExists(fileUrl);
           return fail(res, "Registro não encontrado.", 404);
         }
 
@@ -825,12 +784,7 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
         });
 
         if (!parsed.success) {
-          if (fileUrl) await removeLocalUploadIfExists(fileUrl);
           return fail(res, "Dados inválidos.", 422, parsed.error.flatten());
-        }
-
-        if (existing.logo && existing.logo !== parsed.data.logo) {
-          await removeLocalUploadIfExists(existing.logo);
         }
 
         const updated = await prisma.sponsor.update({
@@ -874,7 +828,6 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
       }
 
       default:
-        if (fileUrl) await removeLocalUploadIfExists(fileUrl);
         return fail(res, "Recurso não suportado.", 400);
     }
   }

@@ -1,59 +1,23 @@
-import { promises as fs } from "fs";
-import path from "path";
-
-const configuredUploadsDir = process.env.UPLOADS_DIR?.trim();
-
-export const uploadsDir = configuredUploadsDir
-  ? path.resolve(configuredUploadsDir)
-  : path.resolve(process.cwd(), "uploads");
-
-export async function ensureUploadsDir() {
-  await fs.mkdir(uploadsDir, { recursive: true });
-}
+import type { Express } from "express";
 
 export function isLocalUploadUrl(value?: string | null) {
   return typeof value === "string" && value.startsWith("/uploads/");
 }
 
-export function getUploadFilenameFromUrl(value?: string | null) {
-  if (!isLocalUploadUrl(value)) return null;
-
-  const safeValue = value ?? "";
-  const relative = safeValue.replace("/uploads/", "").trim();
-
-  if (!relative) return null;
-
-  return path.basename(relative);
+export async function removeLocalUploadIfExists(_value?: string | null) {
+  return;
 }
 
-export function getUploadFullPath(value?: string | null) {
-  const safeName = getUploadFilenameFromUrl(value);
-  if (!safeName) return null;
+export function fileToDataUrl(file?: Express.Multer.File | null) {
+  if (!file) return undefined;
 
-  return path.join(uploadsDir, safeName);
+  const mimeType = file.mimetype || "application/octet-stream";
+  const base64 = file.buffer.toString("base64");
+
+  return `data:${mimeType};base64,${base64}`;
 }
 
-export async function localUploadExists(value?: string | null) {
-  const fullPath = getUploadFullPath(value);
-  if (!fullPath) return false;
-
-  try {
-    await fs.access(fullPath);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-export async function removeLocalUploadIfExists(value?: string | null) {
-  const fullPath = getUploadFullPath(value);
-  if (!fullPath) return;
-
-  try {
-    await fs.unlink(fullPath);
-  } catch (error: any) {
-    if (error?.code !== "ENOENT") {
-      console.error("Erro ao remover arquivo local:", error);
-    }
-  }
+export function filesToDataUrls(files?: Express.Multer.File[] | null) {
+  if (!files || !Array.isArray(files)) return [];
+  return files.map((file) => fileToDataUrl(file)).filter(Boolean) as string[];
 }

@@ -1,6 +1,5 @@
 import express from "express";
 import cors from "cors";
-import path from "path";
 import { env } from "./config/env.js";
 import authRouter from "./routes/auth.js";
 import {
@@ -11,11 +10,8 @@ import {
   sponsorsRouter,
 } from "./routes/resources.js";
 import { ok } from "./utils/http.js";
-import { ensureUploadsDir, uploadsDir } from "./services/files.js";
 
 const app = express();
-
-await ensureUploadsDir();
 
 const allowedOrigins = env.corsOrigin
   .split(",")
@@ -37,42 +33,22 @@ app.use(
   }),
 );
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: "15mb" }));
+app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 
-app.use(
-  "/uploads",
-  express.static(uploadsDir, {
-    index: false,
-    immutable: false,
-    maxAge: "1h",
-    setHeaders: (res, filePath) => {
-      res.setHeader("X-Content-Type-Options", "nosniff");
-
-      const ext = path.extname(filePath).toLowerCase();
-
-      if (ext === ".jpg" || ext === ".jpeg") {
-        res.type("image/jpeg");
-      } else if (ext === ".png") {
-        res.type("image/png");
-      } else if (ext === ".webp") {
-        res.type("image/webp");
-      } else if (ext === ".gif") {
-        res.type("image/gif");
-      } else if (ext === ".svg") {
-        res.type("image/svg+xml");
-      }
-    },
-  }),
+const transparentGif = Buffer.from(
+  "R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==",
+  "base64",
 );
 
 /**
- * Se uma imagem não existir, responde 404 sem JSON.
- * Isso evita transformar requisição de imagem em resposta JSON,
- * o que costuma gerar ERR_BLOCKED_BY_ORB no navegador.
+ * Mantém compatibilidade com registros antigos que ainda apontam para /uploads/...
+ * Em vez de responder 404 e gerar erro visual no navegador, devolve uma imagem mínima.
  */
-app.use("/uploads", (_req, res) => {
-  res.status(404).end();
+app.get("/uploads/*", (_req, res) => {
+  res.setHeader("Content-Type", "image/gif");
+  res.setHeader("Cache-Control", "no-store");
+  res.status(200).send(transparentGif);
 });
 
 app.get("/api/health", (_req, res) => ok(res, { status: "ok" }));
@@ -84,9 +60,6 @@ app.use("/api/members", membersRouter);
 app.use("/api/sponsors", sponsorsRouter);
 app.use("/api/events", eventsRouter);
 
-/**
- * 404 apenas para rotas da API
- */
 app.use("/api", (_req, res) => {
   res.status(404).json({
     success: false,
@@ -94,13 +67,10 @@ app.use("/api", (_req, res) => {
   });
 });
 
-/**
- * Middleware global de erro
- */
 app.use(
   (
     error: any,
-    req: express.Request,
+    _req: express.Request,
     res: express.Response,
     _next: express.NextFunction,
   ) => {
@@ -110,18 +80,7 @@ app.use(
       return;
     }
 
-    const status =
-      error?.status ||
-      error?.statusCode ||
-      (error?.code === "ENOENT" ? 404 : 500);
-
-    /**
-     * Para rota de imagem/upload, evita responder JSON.
-     */
-    if (req.path.startsWith("/uploads")) {
-      res.status(status === 500 ? 404 : status).end();
-      return;
-    }
+    const status = error?.status || error?.statusCode || 500;
 
     res.status(status).json({
       success: false,
@@ -137,6 +96,6 @@ const port = Number(process.env.PORT || env.port || 3001);
 
 app.listen(port, "0.0.0.0", () => {
   console.log(`🚀 Backend rodando em http://0.0.0.0:${port}`);
-  console.log(`🖼️ Uploads em: ${uploadsDir}`);
   console.log(`🌐 Origens permitidas CORS: ${allowedOrigins.join(", ")}`);
+  console.log("🗂️ Uploads persistidos no banco via data URL");
 });
