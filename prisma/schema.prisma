@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  role         String   @default("admin")
+  createdAt    DateTime @default(now())
+}
+
+model GalleryItem {
+  id          String         @id @default(cuid())
+  title       String
+  description String?
+  imageUrl    String?
+  date        String?
+  time        String?
+  location    String?
+  mapLink     String?
+  eventName   String?
+  createdAt   DateTime       @default(now())
+  images      GalleryImage[]
+}
+
+model GalleryImage {
+  id            String      @id @default(cuid())
+  galleryItemId String
+  imageUrl      String
+  isCover       Boolean     @default(false)
+  order         Int         @default(0)
+  createdAt     DateTime    @default(now())
+
+  galleryItem   GalleryItem @relation(fields: [galleryItemId], references: [id], onDelete: Cascade)
+}
+
+model Route {
+  id             String   @id @default(cuid())
+  title          String
+  description    String?
+  imageUrl       String?
+  date           String
+  time           String
+  location       String
+  routeLink      String?
+  mapsLink       String?
+  gpsCoordinates String?
+  distance       String?
+  difficulty     String?
+  createdAt      DateTime @default(now())
+}
+
+model Member {
+  id        String   @id @default(cuid())
+  name      String
+  city      String?
+  moto      String?
+  photo     String?
+  createdAt DateTime @default(now())
+}
+
+model Sponsor {
+  id          String   @id @default(cuid())
+  name        String
+  logo        String?
+  description String?
+  link        String?
+  createdAt   DateTime @default(now())
+}
+
+model Event {
+  id          String   @id @default(cuid())
+  name        String
+  date        String
+  time        String
+  location    String?
+  description String?
+  createdAt   DateTime @default(now())
+}
