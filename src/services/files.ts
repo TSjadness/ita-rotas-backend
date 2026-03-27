@@ -18,7 +18,7 @@ export function isLocalUploadUrl(value?: string | null) {
 export function getUploadFilenameFromUrl(value?: string | null) {
   if (!isLocalUploadUrl(value)) return null;
 
-  const relative = (value as string).replace("/uploads/", "").trim();
+  const relative = value.replace("/uploads/", "").trim();
   if (!relative) return null;
 
   return path.basename(relative);
