@@ -66,6 +66,11 @@ type ResourceConfig<K extends keyof DatabaseSchema> = {
   imageField?: string;
 };
 
+function getParamId(value: string | string[] | undefined) {
+  if (Array.isArray(value)) return value[0];
+  return value;
+}
+
 function getImageValue(
   key: keyof DatabaseSchema,
   body: Record<string, unknown>,
@@ -222,10 +227,16 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
   });
 
   router.get("/:id", async (req, res) => {
+    const id = getParamId(req.params.id);
+
+    if (!id) {
+      return fail(res, "Registro não encontrado.", 404);
+    }
+
     switch (key) {
       case "gallery": {
         const item = await prisma.galleryItem.findUnique({
-          where: { id: req.params.id },
+          where: { id },
           include: {
             images: {
               orderBy: { order: "asc" },
@@ -239,7 +250,7 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
 
       case "routes": {
         const item = await prisma.route.findUnique({
-          where: { id: req.params.id },
+          where: { id },
         });
         if (!item) return fail(res, "Registro não encontrado.", 404);
         return ok(res, { ...item, createdAt: item.createdAt.getTime() });
@@ -247,7 +258,7 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
 
       case "members": {
         const item = await prisma.member.findUnique({
-          where: { id: req.params.id },
+          where: { id },
         });
         if (!item) return fail(res, "Registro não encontrado.", 404);
         return ok(res, { ...item, createdAt: item.createdAt.getTime() });
@@ -255,7 +266,7 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
 
       case "sponsors": {
         const item = await prisma.sponsor.findUnique({
-          where: { id: req.params.id },
+          where: { id },
         });
         if (!item) return fail(res, "Registro não encontrado.", 404);
         return ok(res, { ...item, createdAt: item.createdAt.getTime() });
@@ -263,7 +274,7 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
 
       case "events": {
         const item = await prisma.event.findUnique({
-          where: { id: req.params.id },
+          where: { id },
         });
         if (!item) return fail(res, "Registro não encontrado.", 404);
         return ok(res, { ...item, createdAt: item.createdAt.getTime() });
@@ -315,10 +326,16 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
   });
 
   router.delete("/:id", requireAuth, async (req, res) => {
+    const id = getParamId(req.params.id);
+
+    if (!id) {
+      return fail(res, "Registro não encontrado.", 404);
+    }
+
     switch (key) {
       case "gallery": {
         const existing = await prisma.galleryItem.findUnique({
-          where: { id: req.params.id },
+          where: { id },
           include: {
             images: true,
           },
@@ -326,7 +343,8 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
 
         if (!existing) return fail(res, "Registro não encontrado.", 404);
 
-        for (const image of existing.images) {
+        const galleryImages = existing.images ?? [];
+        for (const image of galleryImages) {
           await removeLocalUploadIfExists(image.imageUrl);
         }
 
@@ -335,15 +353,15 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
         }
 
         await prisma.galleryItem.delete({
-          where: { id: req.params.id },
+          where: { id },
         });
 
-        return ok(res, { deleted: true, id: req.params.id });
+        return ok(res, { deleted: true, id });
       }
 
       case "routes": {
         const existing = await prisma.route.findUnique({
-          where: { id: req.params.id },
+          where: { id },
         });
         if (!existing) return fail(res, "Registro não encontrado.", 404);
 
@@ -352,15 +370,15 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
         }
 
         await prisma.route.delete({
-          where: { id: req.params.id },
+          where: { id },
         });
 
-        return ok(res, { deleted: true, id: req.params.id });
+        return ok(res, { deleted: true, id });
       }
 
       case "members": {
         const existing = await prisma.member.findUnique({
-          where: { id: req.params.id },
+          where: { id },
         });
         if (!existing) return fail(res, "Registro não encontrado.", 404);
 
@@ -369,15 +387,15 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
         }
 
         await prisma.member.delete({
-          where: { id: req.params.id },
+          where: { id },
         });
 
-        return ok(res, { deleted: true, id: req.params.id });
+        return ok(res, { deleted: true, id });
       }
 
       case "sponsors": {
         const existing = await prisma.sponsor.findUnique({
-          where: { id: req.params.id },
+          where: { id },
         });
         if (!existing) return fail(res, "Registro não encontrado.", 404);
 
@@ -386,23 +404,23 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
         }
 
         await prisma.sponsor.delete({
-          where: { id: req.params.id },
+          where: { id },
         });
 
-        return ok(res, { deleted: true, id: req.params.id });
+        return ok(res, { deleted: true, id });
       }
 
       case "events": {
         const existing = await prisma.event.findUnique({
-          where: { id: req.params.id },
+          where: { id },
         });
         if (!existing) return fail(res, "Registro não encontrado.", 404);
 
         await prisma.event.delete({
-          where: { id: req.params.id },
+          where: { id },
         });
 
-        return ok(res, { deleted: true, id: req.params.id });
+        return ok(res, { deleted: true, id });
       }
 
       default:
@@ -534,10 +552,20 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
       ? req.files
       : [];
 
+    const id = getParamId(req.params.id);
+
+    if (!id) {
+      if (fileUrl) await removeLocalUploadIfExists(fileUrl);
+      for (const file of uploadedFiles) {
+        await removeLocalUploadIfExists(`/uploads/${file.filename}`);
+      }
+      return fail(res, "Registro não encontrado.", 404);
+    }
+
     switch (key) {
       case "gallery": {
         const existing = await prisma.galleryItem.findUnique({
-          where: { id: req.params.id },
+          where: { id },
           include: {
             images: {
               orderBy: { order: "asc" },
@@ -648,7 +676,7 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
           currentImages.find((img) => img.isCover) || currentImages[0] || null;
 
         const updated = await prisma.galleryItem.update({
-          where: { id: req.params.id },
+          where: { id },
           data: {
             title: payload.title,
             description: payload.description,
@@ -679,7 +707,7 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
 
       case "routes": {
         const existing = await prisma.route.findUnique({
-          where: { id: req.params.id },
+          where: { id },
         });
 
         if (!existing) {
@@ -720,7 +748,7 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
         }
 
         const updated = await prisma.route.update({
-          where: { id: req.params.id },
+          where: { id },
           data: parsed.data,
         });
 
@@ -729,7 +757,7 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
 
       case "members": {
         const existing = await prisma.member.findUnique({
-          where: { id: req.params.id },
+          where: { id },
         });
 
         if (!existing) {
@@ -763,7 +791,7 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
         }
 
         const updated = await prisma.member.update({
-          where: { id: req.params.id },
+          where: { id },
           data: parsed.data,
         });
 
@@ -772,7 +800,7 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
 
       case "sponsors": {
         const existing = await prisma.sponsor.findUnique({
-          where: { id: req.params.id },
+          where: { id },
         });
 
         if (!existing) {
@@ -806,7 +834,7 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
         }
 
         const updated = await prisma.sponsor.update({
-          where: { id: req.params.id },
+          where: { id },
           data: {
             ...parsed.data,
             link: parsed.data.link || null,
@@ -818,7 +846,7 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
 
       case "events": {
         const existing = await prisma.event.findUnique({
-          where: { id: req.params.id },
+          where: { id },
         });
 
         if (!existing) {
@@ -838,7 +866,7 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
         }
 
         const updated = await prisma.event.update({
-          where: { id: req.params.id },
+          where: { id },
           data: parsed.data,
         });
 
