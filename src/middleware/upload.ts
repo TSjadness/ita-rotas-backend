@@ -19,12 +19,7 @@ const allowedExtensions = new Set([
 
 function normalizeExtension(originalname?: string | null) {
   const ext = path.extname(originalname || "").toLowerCase();
-
-  if (allowedExtensions.has(ext)) {
-    return ext;
-  }
-
-  return null;
+  return allowedExtensions.has(ext) ? ext : null;
 }
 
 const storage = multer.memoryStorage();

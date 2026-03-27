@@ -123,6 +123,7 @@ function mapGalleryItem(item: {
   const orderedImages = [...(item.images || [])].sort(
     (a, b) => a.order - b.order,
   );
+
   const cover =
     orderedImages.find((img) => img.isCover) || orderedImages[0] || null;
 
@@ -162,14 +163,9 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
     switch (key) {
       case "gallery": {
         const data = await prisma.galleryItem.findMany({
-          include: {
-            images: {
-              orderBy: { order: "asc" },
-            },
-          },
+          include: { images: { orderBy: { order: "asc" } } },
           orderBy: { createdAt: "desc" },
         });
-
         return ok(res, data.map(mapGalleryItem));
       }
 
@@ -233,53 +229,38 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
   router.get("/:id", async (req, res) => {
     const id = getParamId(req.params.id);
 
-    if (!id) {
-      return fail(res, "Registro não encontrado.", 404);
-    }
+    if (!id) return fail(res, "Registro não encontrado.", 404);
 
     switch (key) {
       case "gallery": {
         const item = await prisma.galleryItem.findUnique({
           where: { id },
-          include: {
-            images: {
-              orderBy: { order: "asc" },
-            },
-          },
+          include: { images: { orderBy: { order: "asc" } } },
         });
-
         if (!item) return fail(res, "Registro não encontrado.", 404);
         return ok(res, mapGalleryItem(item));
       }
 
       case "routes": {
-        const item = await prisma.route.findUnique({
-          where: { id },
-        });
+        const item = await prisma.route.findUnique({ where: { id } });
         if (!item) return fail(res, "Registro não encontrado.", 404);
         return ok(res, { ...item, createdAt: item.createdAt.getTime() });
       }
 
       case "members": {
-        const item = await prisma.member.findUnique({
-          where: { id },
-        });
+        const item = await prisma.member.findUnique({ where: { id } });
         if (!item) return fail(res, "Registro não encontrado.", 404);
         return ok(res, { ...item, createdAt: item.createdAt.getTime() });
       }
 
       case "sponsors": {
-        const item = await prisma.sponsor.findUnique({
-          where: { id },
-        });
+        const item = await prisma.sponsor.findUnique({ where: { id } });
         if (!item) return fail(res, "Registro não encontrado.", 404);
         return ok(res, { ...item, createdAt: item.createdAt.getTime() });
       }
 
       case "events": {
-        const item = await prisma.event.findUnique({
-          where: { id },
-        });
+        const item = await prisma.event.findUnique({ where: { id } });
         if (!item) return fail(res, "Registro não encontrado.", 404);
         return ok(res, { ...item, createdAt: item.createdAt.getTime() });
       }
@@ -292,9 +273,7 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
   router.post("/", requireAuth, (req, res) => {
     if (key === "gallery") {
       return uploadMultipleImages(req, res, async (error) => {
-        if (error) {
-          return fail(res, error.message || "Falha ao enviar imagens.", 400);
-        }
+        if (error) return fail(res, error.message || "Falha ao enviar imagens.", 400);
         return handleCreate(req, res);
       });
     }
@@ -302,9 +281,7 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
     if (!imageField) return handleCreate(req, res);
 
     uploadSingleImage(req, res, async (error) => {
-      if (error) {
-        return fail(res, error.message || "Falha ao enviar imagem.", 400);
-      }
+      if (error) return fail(res, error.message || "Falha ao enviar imagem.", 400);
       return handleCreate(req, res);
     });
   });
@@ -312,9 +289,7 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
   router.put("/:id", requireAuth, (req, res) => {
     if (key === "gallery") {
       return uploadMultipleImages(req, res, async (error) => {
-        if (error) {
-          return fail(res, error.message || "Falha ao enviar imagens.", 400);
-        }
+        if (error) return fail(res, error.message || "Falha ao enviar imagens.", 400);
         return handleUpdate(req, res);
       });
     }
@@ -322,108 +297,59 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
     if (!imageField) return handleUpdate(req, res);
 
     uploadSingleImage(req, res, async (error) => {
-      if (error) {
-        return fail(res, error.message || "Falha ao enviar imagem.", 400);
-      }
+      if (error) return fail(res, error.message || "Falha ao enviar imagem.", 400);
       return handleUpdate(req, res);
     });
   });
 
   router.delete("/:id", requireAuth, async (req, res) => {
     const id = getParamId(req.params.id);
-
-    if (!id) {
-      return fail(res, "Registro não encontrado.", 404);
-    }
+    if (!id) return fail(res, "Registro não encontrado.", 404);
 
     switch (key) {
       case "gallery": {
         const existing = await prisma.galleryItem.findUnique({
           where: { id },
-          include: {
-            images: true,
-          },
+          include: { images: true },
         });
-
         if (!existing) return fail(res, "Registro não encontrado.", 404);
 
-        const galleryImages = existing.images ?? [];
-        for (const image of galleryImages) {
+        for (const image of existing.images ?? []) {
           await removeLocalUploadIfExists(image.imageUrl);
         }
-
         if (existing.imageUrl) {
           await removeLocalUploadIfExists(existing.imageUrl);
         }
 
-        await prisma.galleryItem.delete({
-          where: { id },
-        });
-
+        await prisma.galleryItem.delete({ where: { id } });
         return ok(res, { deleted: true, id });
       }
 
       case "routes": {
-        const existing = await prisma.route.findUnique({
-          where: { id },
-        });
+        const existing = await prisma.route.findUnique({ where: { id } });
         if (!existing) return fail(res, "Registro não encontrado.", 404);
-
-        if (existing.imageUrl) {
-          await removeLocalUploadIfExists(existing.imageUrl);
-        }
-
-        await prisma.route.delete({
-          where: { id },
-        });
-
+        await prisma.route.delete({ where: { id } });
         return ok(res, { deleted: true, id });
       }
 
       case "members": {
-        const existing = await prisma.member.findUnique({
-          where: { id },
-        });
+        const existing = await prisma.member.findUnique({ where: { id } });
         if (!existing) return fail(res, "Registro não encontrado.", 404);
-
-        if (existing.photo) {
-          await removeLocalUploadIfExists(existing.photo);
-        }
-
-        await prisma.member.delete({
-          where: { id },
-        });
-
+        await prisma.member.delete({ where: { id } });
         return ok(res, { deleted: true, id });
       }
 
       case "sponsors": {
-        const existing = await prisma.sponsor.findUnique({
-          where: { id },
-        });
+        const existing = await prisma.sponsor.findUnique({ where: { id } });
         if (!existing) return fail(res, "Registro não encontrado.", 404);
-
-        if (existing.logo) {
-          await removeLocalUploadIfExists(existing.logo);
-        }
-
-        await prisma.sponsor.delete({
-          where: { id },
-        });
-
+        await prisma.sponsor.delete({ where: { id } });
         return ok(res, { deleted: true, id });
       }
 
       case "events": {
-        const existing = await prisma.event.findUnique({
-          where: { id },
-        });
+        const existing = await prisma.event.findUnique({ where: { id } });
         if (!existing) return fail(res, "Registro não encontrado.", 404);
-
-        await prisma.event.delete({
-          where: { id },
-        });
-
+        await prisma.event.delete({ where: { id } });
         return ok(res, { deleted: true, id });
       }
 
@@ -434,9 +360,7 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
 
   async function handleCreate(req: any, res: any) {
     const fileUrl = fileToDataUrl(req.file);
-    const uploadedFiles: Express.Multer.File[] = Array.isArray(req.files)
-      ? req.files
-      : [];
+    const uploadedFiles: Express.Multer.File[] = Array.isArray(req.files) ? req.files : [];
     const body = { ...req.body };
 
     if (imageField && key !== "gallery") {
@@ -444,7 +368,6 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
     }
 
     const parsed = schema.safeParse(body);
-
     if (!parsed.success) {
       return fail(res, "Dados inválidos.", 422, parsed.error.flatten());
     }
@@ -483,62 +406,33 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
                 }
               : undefined,
           },
-          include: {
-            images: {
-              orderBy: { order: "asc" },
-            },
-          },
+          include: { images: { orderBy: { order: "asc" } } },
         });
 
         return ok(res, mapGalleryItem(created), 201);
       }
 
       case "routes": {
-        const created = await prisma.route.create({
-          data: parsed.data,
-        });
-        return ok(
-          res,
-          { ...created, createdAt: created.createdAt.getTime() },
-          201,
-        );
+        const created = await prisma.route.create({ data: parsed.data });
+        return ok(res, { ...created, createdAt: created.createdAt.getTime() }, 201);
       }
 
       case "members": {
-        const created = await prisma.member.create({
-          data: parsed.data,
-        });
-        return ok(
-          res,
-          { ...created, createdAt: created.createdAt.getTime() },
-          201,
-        );
+        const created = await prisma.member.create({ data: parsed.data });
+        return ok(res, { ...created, createdAt: created.createdAt.getTime() }, 201);
       }
 
       case "sponsors": {
         const payload = parsed.data as z.infer<typeof sponsorSchema>;
         const created = await prisma.sponsor.create({
-          data: {
-            ...payload,
-            link: payload.link || null,
-          },
+          data: { ...payload, link: payload.link || null },
         });
-        return ok(
-          res,
-          { ...created, createdAt: created.createdAt.getTime() },
-          201,
-        );
+        return ok(res, { ...created, createdAt: created.createdAt.getTime() }, 201);
       }
 
       case "events": {
-        const created = await prisma.event.create({
-          data: parsed.data,
-        });
-        return ok(
-          res,
-          { ...created, createdAt: created.createdAt.getTime() },
-          201,
-        );
+        const created = await prisma.event.create({ data: parsed.data });
+        return ok(res, { ...created, createdAt: created.createdAt.getTime() }, 201);
       }
 
       default:
@@ -548,30 +442,19 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
 
   async function handleUpdate(req: any, res: any) {
     const fileUrl = fileToDataUrl(req.file);
-    const uploadedFiles: Express.Multer.File[] = Array.isArray(req.files)
-      ? req.files
-      : [];
-
+    const uploadedFiles: Express.Multer.File[] = Array.isArray(req.files) ? req.files : [];
     const id = getParamId(req.params.id);
 
-    if (!id) {
-      return fail(res, "Registro não encontrado.", 404);
-    }
+    if (!id) return fail(res, "Registro não encontrado.", 404);
 
     switch (key) {
       case "gallery": {
         const existing = await prisma.galleryItem.findUnique({
           where: { id },
-          include: {
-            images: {
-              orderBy: { order: "asc" },
-            },
-          },
+          include: { images: { orderBy: { order: "asc" } } },
         });
 
-        if (!existing) {
-          return fail(res, "Registro não encontrado.", 404);
-        }
+        if (!existing) return fail(res, "Registro não encontrado.", 404);
 
         const parsed = schema.safeParse({
           title: req.body.title ?? existing.title,
@@ -628,10 +511,7 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
         let coverImageId = payload.coverImageId || "";
 
         if (!coverImageId && currentImages.length > 0) {
-          const safeIndex = Math.min(
-            payload.coverIndex ?? 0,
-            currentImages.length - 1,
-          );
+          const safeIndex = Math.min(payload.coverIndex ?? 0, currentImages.length - 1);
           coverImageId = currentImages[safeIndex]?.id || "";
         }
 
@@ -667,32 +547,19 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
             mapLink: payload.mapLink || "",
             eventName: payload.eventName || "",
           },
-          include: {
-            images: {
-              orderBy: { order: "asc" },
-            },
-          },
+          include: { images: { orderBy: { order: "asc" } } },
         });
 
         return ok(res, mapGalleryItem(updated));
       }
 
       case "routes": {
-        const existing = await prisma.route.findUnique({
-          where: { id },
-        });
-
-        if (!existing) {
-          return fail(res, "Registro não encontrado.", 404);
-        }
+        const existing = await prisma.route.findUnique({ where: { id } });
+        if (!existing) return fail(res, "Registro não encontrado.", 404);
 
         const body = { ...req.body };
         if (imageField) {
-          body[imageField] = getImageValue(
-            key,
-            { ...existing, ...body },
-            fileUrl,
-          );
+          body[imageField] = getImageValue(key, { ...existing, ...body }, fileUrl);
         }
 
         const parsed = schema.safeParse({
@@ -722,21 +589,12 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
       }
 
       case "members": {
-        const existing = await prisma.member.findUnique({
-          where: { id },
-        });
-
-        if (!existing) {
-          return fail(res, "Registro não encontrado.", 404);
-        }
+        const existing = await prisma.member.findUnique({ where: { id } });
+        if (!existing) return fail(res, "Registro não encontrado.", 404);
 
         const body = { ...req.body };
         if (imageField) {
-          body[imageField] = getImageValue(
-            key,
-            { ...existing, ...body },
-            fileUrl,
-          );
+          body[imageField] = getImageValue(key, { ...existing, ...body }, fileUrl);
         }
 
         const parsed = schema.safeParse({
@@ -759,21 +617,12 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
       }
 
       case "sponsors": {
-        const existing = await prisma.sponsor.findUnique({
-          where: { id },
-        });
-
-        if (!existing) {
-          return fail(res, "Registro não encontrado.", 404);
-        }
+        const existing = await prisma.sponsor.findUnique({ where: { id } });
+        if (!existing) return fail(res, "Registro não encontrado.", 404);
 
         const body = { ...req.body };
         if (imageField) {
-          body[imageField] = getImageValue(
-            key,
-            { ...existing, ...body },
-            fileUrl,
-          );
+          body[imageField] = getImageValue(key, { ...existing, ...body }, fileUrl);
         }
 
         const parsed = schema.safeParse({
@@ -799,13 +648,8 @@ function createCrudRouter<K extends keyof DatabaseSchema>({
       }
 
       case "events": {
-        const existing = await prisma.event.findUnique({
-          where: { id },
-        });
-
-        if (!existing) {
-          return fail(res, "Registro não encontrado.", 404);
-        }
+        const existing = await prisma.event.findUnique({ where: { id } });
+        if (!existing) return fail(res, "Registro não encontrado.", 404);
 
         const parsed = schema.safeParse({
           name: req.body.name ?? existing.name,
